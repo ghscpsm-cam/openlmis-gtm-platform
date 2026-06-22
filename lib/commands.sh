@@ -112,22 +112,21 @@ cmd_baseline() {
 cmd_baseline_rebuild() {
   local out="${BASELINE_FILE:-baselines/${ENVIRONMENT}_baseline.dump}"
   [[ "$out" = /* ]] || out="$PLATFORM_DIR/$out"
-  confirm "REBUILD baseline $ENVIRONMENT: DETIENE servicios, BORRA la BD y re-migra SIN demo data (varios minutos; $ENVIRONMENT queda vacío de datos de negocio). Se hace un backup antes."
+  confirm "REBUILD baseline $ENVIRONMENT: down -v (ELIMINA volúmenes) y re-migra desde cero SIN demo data (varios minutos; $ENVIRONMENT queda vacío de datos de negocio). Se hace un backup antes."
   log "=== REBUILD baseline esqueleto $ENVIRONMENT (sin demo data) ===" | tee -a "$LOGFILE"
   cmd_backup
-  rd_compose stop 2>&1 | tee -a "$LOGFILE"
-  rd_compose start db 2>&1 | tee -a "$LOGFILE"
-  db_wait_ready
-  log "Vaciando la BD '$DB_NAME'..." | tee -a "$LOGFILE"
-  db_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid();" >/dev/null
-  db_psql -c "DROP DATABASE IF EXISTS $DB_NAME;" >/dev/null
-  db_psql -c "CREATE DATABASE $DB_NAME;" >/dev/null
-  log "Re-migrando (perfil production, SIN overlay de demo-data)..." | tee -a "$LOGFILE"
+  # down -v borra los volúmenes: el postgres re-inicializa desde cero con sus extensiones
+  # (postgis, etc.). Un simple DROP/CREATE DATABASE NO recrea las extensiones → la migración
+  # de referencedata falla con: type "geometry" does not exist.
+  log "Recreando el stack desde cero (down -v): elimina volúmenes y re-inicializa el postgres." | tee -a "$LOGFILE"
+  rd_compose down -v 2>&1 | tee -a "$LOGFILE"
+  log "Re-levantando (perfil production, SIN overlay demo-data). La migración inicial tarda varios minutos..." | tee -a "$LOGFILE"
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
-  wait_for_openlmis 180   # la re-migración inicial puede tardar varios minutos
+  wait_for_openlmis 180   # la migración inicial desde cero puede tardar varios minutos
+  db_wait_ready
   docker exec -i "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$out"
   info "Baseline esqueleto: $out ($(du -h "$out" | cut -f1))"
-  info "Verificá que el usuario de seed (administrator) exista antes de usar 'reset'."
+  info "Usuario bootstrap para seed: 'admin' (verificá que exista antes de usar 'reset')."
 }
 
 # reset = restaurar baseline esqueleto + re-sembrar desde los seed files (NO transacciones).
