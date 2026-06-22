@@ -118,6 +118,7 @@ cmd_baseline_rebuild() {
   rd_compose stop 2>&1 | tee -a "$LOGFILE"
   rd_compose start db 2>&1 | tee -a "$LOGFILE"
   db_wait_ready
+  log "Vaciando la BD '$DB_NAME'..." | tee -a "$LOGFILE"
   db_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid();" >/dev/null
   db_psql -c "DROP DATABASE IF EXISTS $DB_NAME;" >/dev/null
   db_psql -c "CREATE DATABASE $DB_NAME;" >/dev/null

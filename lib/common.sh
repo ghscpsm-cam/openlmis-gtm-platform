@@ -65,7 +65,10 @@ wait_for_openlmis() {
 
 db_wait_ready() {
   local i=0
-  until docker exec -i "$DB_CONTAINER" pg_isready -U "$DB_USER" >/dev/null 2>&1; do
-    sleep 2; i=$((i+1)); (( i > 30 )) && die "La BD ($DB_CONTAINER) no acepta conexiones."
+  while ! docker exec -i "$DB_CONTAINER" pg_isready -U "$DB_USER" >/dev/null 2>&1; do
+    i=$((i + 1))
+    if [ "$i" -gt 30 ]; then die "La BD ($DB_CONTAINER) no acepta conexiones."; fi
+    sleep 2
   done
+  return 0   # explícito: una función que termina en loop retorna el estado del cuerpo (gotcha set -e)
 }
