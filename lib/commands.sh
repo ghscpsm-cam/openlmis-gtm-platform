@@ -112,25 +112,29 @@ cmd_baseline() {
 cmd_baseline_rebuild() {
   local out="${BASELINE_FILE:-baselines/${ENVIRONMENT}_baseline.dump}"
   [[ "$out" = /* ]] || out="$PLATFORM_DIR/$out"
-  confirm "REBUILD baseline $ENVIRONMENT: down -v (ELIMINA volúmenes) y re-migra desde cero SIN demo data (varios minutos; $ENVIRONMENT queda vacío de datos de negocio). Se hace un backup antes."
+  confirm "REBUILD baseline $ENVIRONMENT: recrea la base de datos VACÍA y re-migra desde cero (varios minutos; $ENVIRONMENT queda solo con el bootstrap, SIN datos de negocio). Se hace un backup antes."
   log "=== REBUILD baseline esqueleto $ENVIRONMENT (sin demo data) ===" | tee -a "$LOGFILE"
   cmd_backup
   # down -v borra los volúmenes: el postgres re-inicializa desde cero con sus extensiones
   # (postgis, etc.). Un simple DROP/CREATE DATABASE NO recrea las extensiones → la migración
   # de referencedata falla con: type "geometry" does not exist.
-  log "Recreando el stack desde cero (down -v): elimina volúmenes y re-inicializa el postgres." | tee -a "$LOGFILE"
-  rd_compose down -v 2>&1 | tee -a "$LOGFILE"
-  # En una BD recién creada el init de la imagen NO crea postgis, y la migración de referencedata
-  # necesita el tipo 'geometry'. El flujo manual con pg_restore no sufría esto porque el dump ya
-  # trae postgis y el esquema migrado (los servicios no re-migran). Acá, como migramos desde cero,
-  # hay que crear postgis ANTES: levantamos solo la BD, creamos la extensión, y luego el resto.
-  log "Levantando solo la BD para preparar extensiones..." | tee -a "$LOGFILE"
-  rd_compose up -d db 2>&1 | tee -a "$LOGFILE"
+  # El volumen de postgres es un BIND MOUNT (./data), así que `down -v` NO lo vacía: hay que
+  # recrear la base open_lmis. Y como migramos desde cero, postgis debe crearse ANTES (el init
+  # de la imagen no la crea y la migración de referencedata necesita el tipo 'geometry').
+  # (El flujo manual con pg_restore no sufría esto: el dump ya trae postgis + esquema migrado,
+  #  así que los servicios no re-migran.)
+  log "Deteniendo servicios y dejando solo la BD..." | tee -a "$LOGFILE"
+  rd_compose stop 2>&1 | tee -a "$LOGFILE"
+  rd_compose start db 2>&1 | tee -a "$LOGFILE"
   db_wait_ready
+  log "Recreando la base '$DB_NAME' (vacía)..." | tee -a "$LOGFILE"
+  db_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid();" >/dev/null
+  db_psql -c "DROP DATABASE IF EXISTS $DB_NAME;" >/dev/null
+  db_psql -c "CREATE DATABASE $DB_NAME;" >/dev/null
   db_wait_database
-  log "Creando extensión postgis en '$DB_NAME' (requerida por las migraciones)..." | tee -a "$LOGFILE"
+  log "Creando extensión postgis antes de migrar..." | tee -a "$LOGFILE"
   docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS postgis;" 2>&1 | tee -a "$LOGFILE"
-  log "Levantando el resto de servicios (migración inicial, tarda varios minutos)..." | tee -a "$LOGFILE"
+  log "Levantando servicios (migración inicial desde cero, tarda varios minutos)..." | tee -a "$LOGFILE"
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
   wait_for_openlmis 180   # la migración inicial desde cero puede tardar varios minutos
   db_wait_ready
