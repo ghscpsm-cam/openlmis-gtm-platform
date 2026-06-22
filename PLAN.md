@@ -134,38 +134,30 @@ duplicados, y registrar lote/fecha/usuario/resultado.
 
 ---
 
-## 7. Estructura del repo `openlmis-gua-platform`
+## 7. Estructura del repo `openlmis-gua-platform` (implementada)
+
+**Decisión:** platform **orquesta el ref-distro existente** (`REFDISTRO_DIR=/opt/openlmis-ref-distro`),
+no trae compose propio. **`reset` = restaurar baseline esqueleto + re-sembrar desde seed files**
+(rápido, sin depender de un dump de datos). Backup/restore quedan aparte (pg_dump/pg_restore reales).
 
 ```
 openlmis-gua-platform/
-├── compose/
-│   ├── docker-compose.yml          # base ref-distro (pin 15.4.0)
-│   ├── docker-compose.dev.yml
-│   ├── docker-compose.test.yml
-│   ├── docker-compose.seed.yml     # servicio openlmis-seed (Capa 2)
-│   └── docker-compose.importer.yml # servicio importer (Capa 3)
+├── platform                 # ÚNICO entrypoint (dispatcher bash)
+├── lib/
+│   ├── common.sh            # env, rd_compose (ref-distro), db, waits, confirm
+│   └── commands.sh          # up/down/status/logs/seed/backup/restore/baseline/reset
 ├── env/
-│   ├── dev.env.example
-│   ├── test.env.example
-│   └── secrets/.gitkeep            # secretos fuera de Git
-├── scripts/
-│   ├── platform                    # ÚNICO entrypoint (dispatcher)
-│   ├── platform-up.sh  platform-down.sh  platform-status.sh
-│   ├── backup.sh  restore.sh  reset-test.sh
-│   ├── run-seed.sh                 # adapter → CLI del seeder
-│   └── import-transactions.sh      # adapter → importer
-├── seed/
-│   ├── common/                     # línea base institucional estable
-│   ├── dev/                        # usuarios/datos de desarrollo
-│   └── test/                       # datos cercanos a validación oficial
-├── imports/
-│   ├── templates/                  # plantillas de transacciones
-│   └── staging/                    # archivos a cargar
-├── backups/.gitkeep
+│   ├── dev.env.example  test.env.example   # REFDISTRO_DIR, DB, SEEDER_DIR, creds seed, BASELINE_FILE
+│   └── secrets/.gitkeep
+├── baselines/.gitkeep       # baseline esqueleto por ambiente (dump, gitignored)
+├── backups/.gitkeep         # pg_dumps (gitignored)
 ├── logs/.gitkeep
 └── docs/
-    ├── platform-guide.md  seed-guide.md  import-guide.md  recovery-guide.md
 ```
+
+> La Capa 2 (seed) se delega a `SEEDER_DIR=/opt/openlmis-seeder`; los datos institucionales del
+> seed viven en ese repo (`seed-data/<set>`). La Capa 3 (importer) se integrará como adapter cuando
+> se defina el formato de transacciones.
 
 ### Línea base de datos (qué es "datos básicos")
 - `seed/common/`: estructura institucional estable (GeographicLevels, GeographicZones, FacilityTypes,

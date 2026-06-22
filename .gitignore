@@ -1,11 +1,14 @@
 .DS_Store
 .env
-.env.*
-!.env.*.example
+env/*.env
+!env/*.env.example
 env/secrets/*
 !env/secrets/.gitkeep
 logs/*
 !logs/.gitkeep
 backups/*
 !backups/.gitkeep
+baselines/*
+!baselines/.gitkeep
 *.log
+*.dump

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# platform — único punto de entrada institucional (MSPAS) para OpenLMIS.
+# Orquesta el ref-distro existente + la capa de seed + backup/restore/reset.
+set -euo pipefail
+
+export PLATFORM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/common.sh
+source "$PLATFORM_DIR/lib/common.sh"
+# shellcheck source=lib/commands.sh
+source "$PLATFORM_DIR/lib/commands.sh"
+
+# Extraer flags de confirmación (--confirm / --yes) del resto de argumentos.
+args=()
+for a in "$@"; do
+  case "$a" in
+    --confirm|--yes|-y) export ASSUME_YES=1 ;;
+    *) args+=("$a") ;;
+  esac
+done
+set -- "${args[@]:-}"
+
+cmd="${1:-help}"; shift || true
+
+case "$cmd" in
+  up)       require_env "${1:-}"; load_env "$1"; cmd_up ;;
+  down)     require_env "${1:-}"; load_env "$1"; cmd_down ;;
+  status)   require_env "${1:-}"; load_env "$1"; cmd_status ;;
+  logs)     require_env "${1:-}"; load_env "$1"; shift || true; cmd_logs "$@" ;;
+  seed)     require_env "${1:-}"; load_env "$1"; cmd_seed ;;
+  backup)   require_env "${1:-}"; load_env "$1"; cmd_backup ;;
+  restore)  require_env "${1:-}"; load_env "$1"; cmd_restore "${2:-}" ;;
+  baseline) require_env "${1:-}"; load_env "$1"; cmd_baseline ;;
+  reset)    require_env "${1:-}"; load_env "$1"; cmd_reset ;;
+  help|-h|--help) cmd_help ;;
+  *) err "Comando desconocido: '$cmd'"; cmd_help; exit 1 ;;
+esac
