@@ -14,7 +14,8 @@ Uso: platform <comando> <dev|test> [args]
   seed      <env>              Siembra datos maestros (capa 2: openlmis-seeder)
   backup    <env>              pg_dump de la BD → backups/
   restore   <env> <archivo>    pg_restore de un dump (REEMPLAZA la BD)   [--confirm]
-  baseline  <env>              Captura el estado actual como baseline esqueleto
+  baseline  <env>              Captura el estado ACTUAL como baseline esqueleto
+  baseline-rebuild <env>       Reconstruye esqueleto PURO: BD vacía + re-migrar SIN demo  [--confirm]
   reset     <env>              Restaura baseline + re-siembra (limpio)   [--confirm]
 
 Ambientes: dev | test  (prod no permitido). Comandos destructivos exigen --confirm.
@@ -102,6 +103,30 @@ cmd_baseline() {
   log "Capturando baseline de $ENVIRONMENT → $out" | tee -a "$LOGFILE"
   docker exec -i "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$out"
   info "Baseline: $out ($(du -h "$out" | cut -f1))"
+}
+
+# Reconstruye el baseline ESQUELETO PURO: BD vacía + re-migración SIN demo data.
+# La demo data del ref-distro la carga un servicio aparte (overlay docker-compose.demo-data.yml),
+# NO las migraciones. Un `up` normal (perfil production, sin overlay) sobre una BD vacía deja
+# solo el bootstrap/required (incluido el usuario administrator), sin datos de negocio.
+cmd_baseline_rebuild() {
+  local out="${BASELINE_FILE:-baselines/${ENVIRONMENT}_baseline.dump}"
+  [[ "$out" = /* ]] || out="$PLATFORM_DIR/$out"
+  confirm "REBUILD baseline $ENVIRONMENT: DETIENE servicios, BORRA la BD y re-migra SIN demo data (varios minutos; $ENVIRONMENT queda vacío de datos de negocio). Se hace un backup antes."
+  log "=== REBUILD baseline esqueleto $ENVIRONMENT (sin demo data) ===" | tee -a "$LOGFILE"
+  cmd_backup
+  rd_compose stop 2>&1 | tee -a "$LOGFILE"
+  rd_compose start db 2>&1 | tee -a "$LOGFILE"
+  db_wait_ready
+  db_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid();" >/dev/null
+  db_psql -c "DROP DATABASE IF EXISTS $DB_NAME;" >/dev/null
+  db_psql -c "CREATE DATABASE $DB_NAME;" >/dev/null
+  log "Re-migrando (perfil production, SIN overlay de demo-data)..." | tee -a "$LOGFILE"
+  rd_compose up -d 2>&1 | tee -a "$LOGFILE"
+  wait_for_openlmis 180   # la re-migración inicial puede tardar varios minutos
+  docker exec -i "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$out"
+  info "Baseline esqueleto: $out ($(du -h "$out" | cut -f1))"
+  info "Verificá que el usuario de seed (administrator) exista antes de usar 'reset'."
 }
 
 # reset = restaurar baseline esqueleto + re-sembrar desde los seed files (NO transacciones).

@@ -30,6 +30,7 @@ case "$cmd" in
   backup)   require_env "${1:-}"; load_env "$1"; cmd_backup ;;
   restore)  require_env "${1:-}"; load_env "$1"; cmd_restore "${2:-}" ;;
   baseline) require_env "${1:-}"; load_env "$1"; cmd_baseline ;;
+  baseline-rebuild) require_env "${1:-}"; load_env "$1"; cmd_baseline_rebuild ;;
   reset)    require_env "${1:-}"; load_env "$1"; cmd_reset ;;
   help|-h|--help) cmd_help ;;
   *) err "Comando desconocido: '$cmd'"; cmd_help; exit 1 ;;
