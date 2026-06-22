@@ -72,3 +72,13 @@ db_wait_ready() {
   done
   return 0   # explícito: una función que termina en loop retorna el estado del cuerpo (gotcha set -e)
 }
+
+db_wait_database() {
+  local i=0
+  while ! docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; do
+    i=$((i + 1))
+    if [ "$i" -gt 30 ]; then die "La base '$DB_NAME' no está disponible."; fi
+    sleep 2
+  done
+  return 0
+}

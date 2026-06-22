@@ -120,7 +120,17 @@ cmd_baseline_rebuild() {
   # de referencedata falla con: type "geometry" does not exist.
   log "Recreando el stack desde cero (down -v): elimina volúmenes y re-inicializa el postgres." | tee -a "$LOGFILE"
   rd_compose down -v 2>&1 | tee -a "$LOGFILE"
-  log "Re-levantando (perfil production, SIN overlay demo-data). La migración inicial tarda varios minutos..." | tee -a "$LOGFILE"
+  # En una BD recién creada el init de la imagen NO crea postgis, y la migración de referencedata
+  # necesita el tipo 'geometry'. El flujo manual con pg_restore no sufría esto porque el dump ya
+  # trae postgis y el esquema migrado (los servicios no re-migran). Acá, como migramos desde cero,
+  # hay que crear postgis ANTES: levantamos solo la BD, creamos la extensión, y luego el resto.
+  log "Levantando solo la BD para preparar extensiones..." | tee -a "$LOGFILE"
+  rd_compose up -d db 2>&1 | tee -a "$LOGFILE"
+  db_wait_ready
+  db_wait_database
+  log "Creando extensión postgis en '$DB_NAME' (requerida por las migraciones)..." | tee -a "$LOGFILE"
+  docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS postgis;" 2>&1 | tee -a "$LOGFILE"
+  log "Levantando el resto de servicios (migración inicial, tarda varios minutos)..." | tee -a "$LOGFILE"
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
   wait_for_openlmis 180   # la migración inicial desde cero puede tardar varios minutos
   db_wait_ready
