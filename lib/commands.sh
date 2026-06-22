@@ -16,7 +16,7 @@ Uso: platform <comando> <dev|test> [args]
   restore   <env> <archivo>    pg_restore de un dump (REEMPLAZA la BD)   [--confirm]
   baseline  <env>              Captura el estado ACTUAL como baseline esqueleto
   baseline-rebuild <env>       Reconstruye esqueleto PURO: BD vacía + re-migrar SIN demo  [--confirm]
-  reset     <env>              Restaura baseline + re-siembra (limpio)   [--confirm]
+  reset     <env>              Restaura el baseline LIMPIO (no siembra)   [--confirm]
 
 Ambientes: dev | test  (prod no permitido). Comandos destructivos exigen --confirm.
 EOF
@@ -143,16 +143,16 @@ cmd_baseline_rebuild() {
   info "Usuario bootstrap para seed: 'admin' (verificá que exista antes de usar 'reset')."
 }
 
-# reset = restaurar baseline esqueleto + re-sembrar desde los seed files (NO transacciones).
+# reset = restaurar el baseline LIMPIO y nada más. Sembrar es un paso manual aparte
+# (platform seed <env>), para que el usuario cargue el set que quiera cuando quiera.
 cmd_reset() {
   local baseline="${BASELINE_FILE:-baselines/${ENVIRONMENT}_baseline.dump}"
   [[ "$baseline" = /* ]] || baseline="$PLATFORM_DIR/$baseline"
   [[ -f "$baseline" ]] || die "No hay baseline ($baseline). Generalo con: platform baseline $ENVIRONMENT"
-  confirm "RESET $ENVIRONMENT: restaura el baseline esqueleto y re-siembra. Se PIERDEN los datos actuales de $ENVIRONMENT."
+  confirm "RESET $ENVIRONMENT: restaura el baseline LIMPIO (no siembra). Se PIERDEN los datos actuales de $ENVIRONMENT."
   log "=== RESET $ENVIRONMENT ===" | tee -a "$LOGFILE"
   cmd_backup                      # respaldo de seguridad automático
-  restore_dump "$baseline"        # estado limpio (esqueleto)
-  cmd_seed                        # datos maestros desde los seed files
+  restore_dump "$baseline"        # vuelve al estado limpio del baseline
   cmd_status
-  log "Reset completo: $ENVIRONMENT limpio + seed aplicado (sin transacciones)." | tee -a "$LOGFILE"
+  log "Reset completo: $ENVIRONMENT en el baseline limpio. Para cargar datos: platform seed $ENVIRONMENT" | tee -a "$LOGFILE"
 }

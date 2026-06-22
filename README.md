@@ -22,7 +22,7 @@ reset. Así no duplica ni reemplaza el deployment actual.
 ./platform backup dev             # pg_dump → backups/
 ./platform restore dev backups/dev_20260622-1200.dump --confirm
 ./platform baseline dev           # captura el baseline limpio (1 vez, pg_dump)
-./platform reset dev --confirm    # restaura baseline + re-siembra (~2.6 min)
+./platform reset dev --confirm    # restaura baseline LIMPIO, NO siembra (~2.6 min)
 ./platform down dev               # detiene servicios (sin borrar datos)
 ```
 
@@ -34,8 +34,9 @@ Flujo recomendado para iterar en dev (**~2.6 min**, probado):
 
 1. **Una sola vez** — llevá OpenLMIS al estado "limpio" que quieras y capturalo:
    `platform baseline dev` (es un `pg_dump`, segundos). Ese dump queda en `baselines/<env>_baseline.dump`.
-2. **Cada vez que quieras limpio** — `platform reset dev --confirm`: restaura el baseline
-   (segundos) + re-siembra desde los seed files. Hace un backup de seguridad automático antes.
+2. **Cada vez que quieras limpio** — `platform reset dev --confirm`: restaura el baseline y deja
+   OpenLMIS **completamente limpio** (NO siembra). Hace un backup de seguridad automático antes.
+3. **Cuando quieras datos** — `platform seed dev` (manual, aparte): cargás el set que quieras.
 
 El costo de ~2.6 min es casi todo el **reinicio de los servicios de OpenLMIS** (inherente; el
 `pg_restore` es de segundos). El procedimiento manual equivalente tiene el mismo costo.
