@@ -52,6 +52,7 @@ wait_for_openlmis() {
   local url="$OPENLMIS_URL/api/programs" max="${1:-120}" i=0 code
   log "Esperando que OpenLMIS responda ($url)..."
   while (( i < max )); do
+    assert_critical_services_alive
     code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || echo 000)
     # 200 = ok, 401 = servicio arriba pero requiere auth (también "listo")
     if [[ "$code" == "200" || "$code" == "401" ]]; then
@@ -61,6 +62,21 @@ wait_for_openlmis() {
     sleep 10; i=$((i+1))
   done
   die "OpenLMIS no respondió tras ~$((max*10))s (último HTTP $code)."
+}
+
+assert_critical_services_alive() {
+  local service cid state exit_code
+  for service in auth referencedata nginx; do
+    cid="$(rd_compose ps -q "$service" 2>/dev/null || true)"
+    [[ -n "$cid" ]] || continue
+    state="$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null || echo unknown)"
+    exit_code="$(docker inspect -f '{{.State.ExitCode}}' "$cid" 2>/dev/null || echo unknown)"
+    if [[ "$state" == "exited" || "$state" == "dead" ]]; then
+      err "Servicio crítico '$service' terminó durante el arranque (state=$state exit=$exit_code)."
+      rd_compose logs --tail=80 "$service" >&2 || true
+      exit 1
+    fi
+  done
 }
 
 db_wait_ready() {

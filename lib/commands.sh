@@ -116,8 +116,8 @@ cmd_baseline_rebuild() {
   log "=== REBUILD baseline esqueleto $ENVIRONMENT (sin demo data) ===" | tee -a "$LOGFILE"
   cmd_backup
   # down -v borra los volúmenes: el postgres re-inicializa desde cero con sus extensiones
-  # (postgis, etc.). Un simple DROP/CREATE DATABASE NO recrea las extensiones → la migración
-  # de referencedata falla con: type "geometry" does not exist.
+  # (postgis, uuid-ossp, etc.). Un simple DROP/CREATE DATABASE NO recrea las extensiones:
+  # referencedata necesita geometry y uuid_generate_v4() durante sus migraciones.
   # El volumen de postgres es un BIND MOUNT (./data), así que `down -v` NO lo vacía: hay que
   # recrear la base open_lmis. Y como migramos desde cero, postgis debe crearse ANTES (el init
   # de la imagen no la crea y la migración de referencedata necesita el tipo 'geometry').
@@ -132,8 +132,9 @@ cmd_baseline_rebuild() {
   db_psql -c "DROP DATABASE IF EXISTS $DB_NAME;" >/dev/null
   db_psql -c "CREATE DATABASE $DB_NAME;" >/dev/null
   db_wait_database
-  log "Creando extensión postgis antes de migrar..." | tee -a "$LOGFILE"
-  docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS postgis;" 2>&1 | tee -a "$LOGFILE"
+  log "Creando extensiones requeridas antes de migrar..." | tee -a "$LOGFILE"
+  docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" \
+    -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" 2>&1 | tee -a "$LOGFILE"
   log "Levantando servicios (migración inicial desde cero, tarda varios minutos)..." | tee -a "$LOGFILE"
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
   wait_for_openlmis 180   # la migración inicial desde cero puede tardar varios minutos
