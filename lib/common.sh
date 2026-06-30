@@ -53,6 +53,7 @@ wait_for_openlmis() {
   log "Esperando que OpenLMIS responda ($url)..."
   while (( i < max )); do
     assert_critical_services_alive
+    ensure_nginx_process
     code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || echo 000)
     # 200 = ok, 401 = servicio arriba pero requiere auth (también "listo")
     if [[ "$code" == "200" || "$code" == "401" ]]; then
@@ -62,6 +63,19 @@ wait_for_openlmis() {
     sleep 10; i=$((i+1))
   done
   die "OpenLMIS no respondió tras ~$((max*10))s (último HTTP $code)."
+}
+
+ensure_nginx_process() {
+  local cid state
+  cid="$(rd_compose ps -q nginx 2>/dev/null || true)"
+  [[ -n "$cid" ]] || return 0
+  state="$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null || echo unknown)"
+  [[ "$state" == "running" ]] || return 0
+
+  if ! docker exec "$cid" sh -c "ps aux | grep -q '[n]ginx: master process'" >/dev/null 2>&1; then
+    info "nginx está running pero sin master process; intentando arrancarlo..."
+    docker exec "$cid" nginx >/dev/null 2>&1 || true
+  fi
 }
 
 assert_critical_services_alive() {
