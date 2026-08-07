@@ -34,7 +34,17 @@ load_env() {
 }
 
 # docker compose del ref-distro existente (corre desde su dir para usar su propio .env)
-rd_compose() { ( cd "$REFDISTRO_DIR" && docker compose "$@" ); }
+# y agrega el override versionado de platform encima de los YAMLs locales.
+rd_compose() {
+  (
+    cd "$REFDISTRO_DIR"
+    local files=(-f docker-compose.yml)
+    [[ -f docker-compose.override.yml ]] && files+=(-f docker-compose.override.yml)
+    [[ -f "$PLATFORM_DIR/overrides/openlmis-ref-distro.yml" ]] && \
+      files+=(-f "$PLATFORM_DIR/overrides/openlmis-ref-distro.yml")
+    docker compose "${files[@]}" "$@"
+  )
+}
 
 # psql dentro del contenedor de BD
 db_psql() { docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" "$@"; }

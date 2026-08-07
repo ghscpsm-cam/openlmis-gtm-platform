@@ -27,6 +27,7 @@ case "$cmd" in
   status)   require_env "${1:-}"; load_env "$1"; cmd_status ;;
   logs)     require_env "${1:-}"; load_env "$1"; shift || true; cmd_logs "$@" ;;
   seed)     require_env "${1:-}"; load_env "$1"; cmd_seed ;;
+  db-fixes) require_env "${1:-}"; load_env "$1"; cmd_db_fixes ;;
   backup)   require_env "${1:-}"; load_env "$1"; cmd_backup ;;
   restore)  require_env "${1:-}"; load_env "$1"; cmd_restore "${2:-}" ;;
   baseline) require_env "${1:-}"; load_env "$1"; cmd_baseline ;;

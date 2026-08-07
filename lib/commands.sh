@@ -12,6 +12,7 @@ Uso: platform <comando> <dev|test> [args]
   status    <env>              Estado de servicios + OpenLMIS
   logs      <env> [servicio]   Logs del ref-distro
   seed      <env>              Siembra datos maestros (capa 2: openlmis-seeder)
+  db-fixes  <env>              Aplica fixes SQL idempotentes de plataforma
   backup    <env>              pg_dump de la BD → backups/
   restore   <env> <archivo>    pg_restore de un dump (REEMPLAZA la BD)   [--confirm]
   baseline  <env>              Captura el estado ACTUAL como baseline esqueleto
@@ -27,6 +28,7 @@ cmd_up() {
   log "platform up $ENVIRONMENT" | tee -a "$LOGFILE"
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
   wait_for_openlmis | tee -a "$LOGFILE"
+  apply_db_fixes
   cmd_status
 }
 
@@ -57,6 +59,33 @@ cmd_seed() {
   [[ -n "${SEED_PASSWORD:-}" ]] && creds+=(-e "OPENLMIS_PASSWORD=$SEED_PASSWORD")
   ( cd "$SEEDER_DIR" && docker compose -f docker-compose.seed.yml run --rm "${creds[@]}" \
       seeder import "$ENVIRONMENT" "$SEED_SET" ) 2>&1 | tee -a "$LOGFILE"
+  apply_db_fixes
+}
+
+apply_db_fixes() {
+  local dir="$PLATFORM_DIR/db-fixes"
+  [[ -d "$dir" ]] || return 0
+
+  shopt -s nullglob
+  local fixes=("$dir"/*.sql)
+  shopt -u nullglob
+  (( ${#fixes[@]} > 0 )) || return 0
+
+  db_wait_ready
+  db_wait_database
+
+  local fix
+  for fix in "${fixes[@]}"; do
+    log "Aplicando db-fix $(basename "$fix")" | tee -a "$LOGFILE"
+    # Cada archivo corre en su propia sesion: CREATE INDEX CONCURRENTLY no puede ir en BEGIN/COMMIT.
+    docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" \
+      -v ON_ERROR_STOP=1 < "$fix" 2>&1 | tee -a "$LOGFILE"
+  done
+}
+
+cmd_db_fixes() {
+  log "platform db-fixes $ENVIRONMENT" | tee -a "$LOGFILE"
+  apply_db_fixes
 }
 
 cmd_backup() {
@@ -82,6 +111,7 @@ restore_dump() {
   docker exec -i "$DB_CONTAINER" rm -f /tmp/restore.dump || true
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
   wait_for_openlmis
+  apply_db_fixes
 }
 
 cmd_restore() {
@@ -138,6 +168,7 @@ cmd_baseline_rebuild() {
   log "Levantando servicios (migración inicial desde cero, tarda varios minutos)..." | tee -a "$LOGFILE"
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
   wait_for_openlmis 180   # la migración inicial desde cero puede tardar varios minutos
+  apply_db_fixes
   db_wait_ready
   docker exec -i "$DB_CONTAINER" pg_dump -U "$DB_USER" -Fc "$DB_NAME" > "$out"
   info "Baseline esqueleto: $out ($(du -h "$out" | cut -f1))"
