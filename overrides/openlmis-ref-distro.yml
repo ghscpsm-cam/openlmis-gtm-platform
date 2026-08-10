@@ -1,12 +1,12 @@
 services:
   referencedata:
     environment:
-      JAVA_OPTS: "-server -Xmx1536m -Dlogging.config=/config/log/logback.xml"
-    mem_limit: "2G"
-    cpus: 2
+      JAVA_OPTS: "-server -Xmx${REFERENCEDATA_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"
+    mem_limit: "${REFERENCEDATA_MEM_LIMIT:-2G}"
+    cpus: "${REFERENCEDATA_CPUS:-2}"
   stockmanagement:
     restart: unless-stopped
     environment:
-      JAVA_OPTS: "-server -Xmx1536m -Dlogging.config=/config/log/logback.xml"
-    mem_limit: "2G"
-    cpus: 2
+      JAVA_OPTS: "-server -Xmx${STOCKMANAGEMENT_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"
+    mem_limit: "${STOCKMANAGEMENT_MEM_LIMIT:-2G}"
+    cpus: "${STOCKMANAGEMENT_CPUS:-2}"
