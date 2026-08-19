@@ -66,7 +66,9 @@ reload_runtime_config() {
   cid="$(rd_compose ps -q reference-ui 2>/dev/null || true)"
   [[ -n "$cid" ]] || return 0
   for i in {1..20}; do
-    if docker exec "$cid" nginx -t >/dev/null 2>&1; then
+    if docker exec "$cid" sh -c \
+      'test -s /var/run/nginx.pid && kill -0 "$(cat /var/run/nginx.pid)"' >/dev/null 2>&1 \
+      && docker exec "$cid" nginx -t >/dev/null 2>&1; then
       docker exec "$cid" nginx -s reload >/dev/null
       info "Configuración de reference-ui recargada."
       return 0
