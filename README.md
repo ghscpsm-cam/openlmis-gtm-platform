@@ -15,7 +15,7 @@ reset. Así no duplica ni reemplaza el deployment actual.
 
 Platform también carga un override versionado (`overrides/openlmis-ref-distro.yml`) encima del
 compose del ref-distro. Esto permite repetir ajustes operacionales, como memoria/CPU de
-`referencedata`, sin editar a mano cada servidor.
+`referencedata`, y fijar las imágenes GTM sin editar a mano cada servidor.
 
 ## Uso
 
@@ -74,6 +74,18 @@ cp env/dev.env.example env/dev.env     # ajustar REFDISTRO_DIR, creds de seed, e
 ```
 
 `env/*.env` no se versiona (solo los `.example`). Los dumps (`backups/`, `baselines/`) tampoco.
+
+Las imágenes personalizadas se seleccionan por ambiente y siempre deben usar una versión
+inmutable, nunca `latest`:
+
+```bash
+REFERENCE_UI_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.1
+STOCKMANAGEMENT_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.1
+```
+
+La UI incluye la corrección de fechas de vencimiento en movimientos de inventario. La imagen de
+Stock Management incluye el formato de Stock Card para nombres largos. Para promover una nueva
+versión, primero se prueban ambas imágenes juntas y luego se actualizan estos dos valores.
 
 ## Estructura
 ```
