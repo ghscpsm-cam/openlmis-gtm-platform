@@ -7,7 +7,7 @@ services:
     mem_limit: "${REFERENCEDATA_MEM_LIMIT:-2G}"
     cpus: "${REFERENCEDATA_CPUS:-2}"
   stockmanagement:
-    image: "${STOCKMANAGEMENT_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.2}"
+    image: "${STOCKMANAGEMENT_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.3}"
     restart: unless-stopped
     environment:
       JAVA_OPTS: "-server -Xmx${STOCKMANAGEMENT_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"

@@ -80,7 +80,7 @@ inmutable, nunca `latest`:
 
 ```bash
 REFERENCE_UI_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.3
-STOCKMANAGEMENT_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.2
+STOCKMANAGEMENT_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.3
 ```
 
 La UI incluye la corrección de fechas de vencimiento en movimientos de inventario. La imagen de
