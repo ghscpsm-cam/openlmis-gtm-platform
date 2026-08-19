@@ -79,7 +79,7 @@ Las imágenes personalizadas se seleccionan por ambiente y siempre deben usar un
 inmutable, nunca `latest`:
 
 ```bash
-REFERENCE_UI_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.3
+REFERENCE_UI_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.4
 STOCKMANAGEMENT_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.3
 ```
 
