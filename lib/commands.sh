@@ -26,7 +26,9 @@ EOF
 cmd_up() {
   command -v docker >/dev/null || die "Docker no disponible"
   log "platform up $ENVIRONMENT" | tee -a "$LOGFILE"
+  sync_runtime_config
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
+  reload_runtime_config
   wait_for_openlmis | tee -a "$LOGFILE"
   apply_db_fixes
   cmd_status
@@ -109,7 +111,9 @@ restore_dump() {
   docker cp "$dump" "$DB_CONTAINER:/tmp/restore.dump"
   docker exec -i "$DB_CONTAINER" pg_restore -U "$DB_USER" -d "$DB_NAME" /tmp/restore.dump 2>&1 | tee -a "$LOGFILE" || true
   docker exec -i "$DB_CONTAINER" rm -f /tmp/restore.dump || true
+  sync_runtime_config
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
+  reload_runtime_config
   wait_for_openlmis
   apply_db_fixes
 }
@@ -166,7 +170,9 @@ cmd_baseline_rebuild() {
   docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" \
     -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" 2>&1 | tee -a "$LOGFILE"
   log "Levantando servicios (migración inicial desde cero, tarda varios minutos)..." | tee -a "$LOGFILE"
+  sync_runtime_config
   rd_compose up -d 2>&1 | tee -a "$LOGFILE"
+  reload_runtime_config
   wait_for_openlmis 180   # la migración inicial desde cero puede tardar varios minutos
   apply_db_fixes
   db_wait_ready

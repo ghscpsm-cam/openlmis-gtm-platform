@@ -46,6 +46,36 @@ rd_compose() {
   )
 }
 
+sync_runtime_config() {
+  local src="$PLATFORM_DIR/config/reference-ui/default.conf"
+  local dst="$REFDISTRO_DIR/config/reference-ui/default.conf"
+  RUNTIME_CONFIG_CHANGED=0
+  [[ -f "$src" ]] || die "Falta configuración versionada: $src"
+  mkdir -p "$(dirname "$dst")"
+  if ! cmp -s "$src" "$dst"; then
+    cp "$src" "$dst"
+    chmod 0644 "$dst"
+    RUNTIME_CONFIG_CHANGED=1
+    info "Configuración de reference-ui actualizada."
+  fi
+}
+
+reload_runtime_config() {
+  [[ "${RUNTIME_CONFIG_CHANGED:-0}" == "1" ]] || return 0
+  local cid i
+  cid="$(rd_compose ps -q reference-ui 2>/dev/null || true)"
+  [[ -n "$cid" ]] || return 0
+  for i in {1..20}; do
+    if docker exec "$cid" nginx -t >/dev/null 2>&1; then
+      docker exec "$cid" nginx -s reload >/dev/null
+      info "Configuración de reference-ui recargada."
+      return 0
+    fi
+    sleep 1
+  done
+  die "No fue posible recargar la configuración de reference-ui."
+}
+
 # psql dentro del contenedor de BD
 db_psql() { docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" "$@"; }
 
