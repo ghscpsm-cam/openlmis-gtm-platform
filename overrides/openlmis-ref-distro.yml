@@ -1,6 +1,6 @@
 services:
   reference-ui:
-    image: "${REFERENCE_UI_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.4}"
+    image: "${REFERENCE_UI_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.5}"
   referencedata:
     environment:
       JAVA_OPTS: "-server -Xmx${REFERENCEDATA_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"

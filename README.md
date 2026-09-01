@@ -79,13 +79,15 @@ Las imágenes personalizadas se seleccionan por ambiente y siempre deben usar un
 inmutable, nunca `latest`:
 
 ```bash
-REFERENCE_UI_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.4
+REFERENCE_UI_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.5
 STOCKMANAGEMENT_IMAGE=ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.3
 ```
 
-La UI incluye la corrección de fechas de vencimiento en movimientos de inventario. La imagen de
-Stock Management incluye el formato de Stock Card para nombres largos. Para promover una nueva
-versión, primero se prueban ambas imágenes juntas y luego se actualizan estos dos valores.
+La UI incluye las traducciones GTM, la corrección de fechas de vencimiento y el filtro de
+reportes por establecimiento principal. Los usuarios de bodega ven su categoría y los reportes
+comunes; los administradores sin establecimiento asignado conservan la lista completa. La imagen
+de Stock Management incluye el formato de Tarjeta de Almacén para nombres largos. Para promover
+una nueva versión, primero se prueban ambas imágenes juntas y luego se actualizan estos valores.
 
 ## Estructura
 ```
