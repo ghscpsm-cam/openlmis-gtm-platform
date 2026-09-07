@@ -1,4 +1,7 @@
 services:
+  nginx:
+    environment:
+      CLIENT_MAX_BODY_SIZE: "${CLIENT_MAX_BODY_SIZE:-50m}"
   reference-ui:
     image: "${REFERENCE_UI_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.5}"
   referencedata:
