@@ -9,6 +9,12 @@ services:
       JAVA_OPTS: "-server -Xmx${REFERENCEDATA_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"
     mem_limit: "${REFERENCEDATA_MEM_LIMIT:-2G}"
     cpus: "${REFERENCEDATA_CPUS:-2}"
+  report:
+    restart: unless-stopped
+    environment:
+      JAVA_OPTS: "-server -Xmx${REPORT_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"
+    mem_limit: "${REPORT_MEM_LIMIT:-2G}"
+    cpus: "${REPORT_CPUS:-2}"
   stockmanagement:
     image: "${STOCKMANAGEMENT_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.4}"
     restart: unless-stopped
