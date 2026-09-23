@@ -103,7 +103,7 @@ restore_dump() {
   [[ -f "$dump" ]] || die "No existe el dump: $dump"
   log "Restaurando BD de $ENVIRONMENT desde $dump" | tee -a "$LOGFILE"
   rd_compose stop 2>&1 | tee -a "$LOGFILE"
-  rd_compose start db 2>&1 | tee -a "$LOGFILE"
+  rd_compose up -d db 2>&1 | tee -a "$LOGFILE"  # up (no start): en un servidor nuevo db/consul aún no existen
   db_wait_ready
   db_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid();" >/dev/null
   db_psql -c "DROP DATABASE IF EXISTS $DB_NAME;" >/dev/null
@@ -159,7 +159,7 @@ cmd_baseline_rebuild() {
   #  así que los servicios no re-migran.)
   log "Deteniendo servicios y dejando solo la BD..." | tee -a "$LOGFILE"
   rd_compose stop 2>&1 | tee -a "$LOGFILE"
-  rd_compose start db 2>&1 | tee -a "$LOGFILE"
+  rd_compose up -d db 2>&1 | tee -a "$LOGFILE"  # up (no start): en un servidor nuevo db/consul aún no existen
   db_wait_ready
   log "Recreando la base '$DB_NAME' (vacía)..." | tee -a "$LOGFILE"
   db_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid();" >/dev/null
