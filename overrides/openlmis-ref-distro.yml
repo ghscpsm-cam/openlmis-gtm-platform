@@ -1,3 +1,11 @@
+# Resolución del dominio público dentro de los contenedores cuando el DNS del servidor no lo
+# conoce (p. ej. DNS interno MSPAS). Los servicios validan tokens contra BASE_URL, y nginx solo
+# exime del rate limit las llamadas cuyo host es VIRTUAL_HOST, así que deben usar el dominio.
+# Se activa con OPENLMIS_HOST_ALIAS/OPENLMIS_HOST_IP en env/<env>.env; el default es inofensivo.
+x-host-alias: &host-alias
+  extra_hosts:
+    - "${OPENLMIS_HOST_ALIAS:-openlmis-host-alias.invalid}:${OPENLMIS_HOST_IP:-127.0.0.1}"
+
 services:
   nginx:
     environment:
@@ -5,20 +13,41 @@ services:
   reference-ui:
     image: "${REFERENCE_UI_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-ui:8.0.1-gtm.5}"
   referencedata:
+    <<: *host-alias
     environment:
       JAVA_OPTS: "-server -Xmx${REFERENCEDATA_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"
     mem_limit: "${REFERENCEDATA_MEM_LIMIT:-2G}"
     cpus: "${REFERENCEDATA_CPUS:-2}"
   report:
+    <<: *host-alias
     restart: unless-stopped
     environment:
       JAVA_OPTS: "-server -Xmx${REPORT_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"
     mem_limit: "${REPORT_MEM_LIMIT:-2G}"
     cpus: "${REPORT_CPUS:-2}"
   stockmanagement:
+    <<: *host-alias
     image: "${STOCKMANAGEMENT_IMAGE:-ghcr.io/ghscpsm-cam/openlmis-gtm-stockmanagement:5.3.0-gtm.4}"
     restart: unless-stopped
     environment:
       JAVA_OPTS: "-server -Xmx${STOCKMANAGEMENT_XMX:-1536m} -Dlogging.config=/config/log/logback.xml"
     mem_limit: "${STOCKMANAGEMENT_MEM_LIMIT:-2G}"
     cpus: "${STOCKMANAGEMENT_CPUS:-2}"
+  requisition:
+    <<: *host-alias
+  auth:
+    <<: *host-alias
+  notification:
+    <<: *host-alias
+  fulfillment:
+    <<: *host-alias
+  cce:
+    <<: *host-alias
+  buq:
+    <<: *host-alias
+  hapifhir:
+    <<: *host-alias
+  diagnostics:
+    <<: *host-alias
+  dhis2-integration:
+    <<: *host-alias
