@@ -46,6 +46,16 @@ rd_compose() {
   )
 }
 
+# stop_all — detiene todos los servicios y elimina el contenedor de consul (sin datos).
+# consul conserva los registros de las IPs anteriores de los servicios; si sobreviven,
+# nginx reparte peticiones entre IPs viejas que ahora son de otro contenedor (401,
+# "resource id (template)"). Con todo detenido, el próximo up lo crea limpio y cada
+# servicio se registra con su IP actual.
+stop_all() {
+  rd_compose stop
+  rd_compose rm -f consul
+}
+
 sync_runtime_config() {
   local src="$PLATFORM_DIR/config/reference-ui/default.conf"
   local dst="$REFDISTRO_DIR/config/reference-ui/default.conf"

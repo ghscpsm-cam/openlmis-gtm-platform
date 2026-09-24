@@ -36,7 +36,7 @@ cmd_up() {
 
 cmd_down() {
   log "platform down $ENVIRONMENT (stop, sin borrar datos)" | tee -a "$LOGFILE"
-  rd_compose stop 2>&1 | tee -a "$LOGFILE"
+  stop_all 2>&1 | tee -a "$LOGFILE"
 }
 
 cmd_status() {
@@ -102,7 +102,7 @@ restore_dump() {
   local dump="$1"
   [[ -f "$dump" ]] || die "No existe el dump: $dump"
   log "Restaurando BD de $ENVIRONMENT desde $dump" | tee -a "$LOGFILE"
-  rd_compose stop 2>&1 | tee -a "$LOGFILE"
+  stop_all 2>&1 | tee -a "$LOGFILE"
   rd_compose up -d db 2>&1 | tee -a "$LOGFILE"  # up (no start): en un servidor nuevo db/consul aún no existen
   db_wait_ready
   db_psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid();" >/dev/null
@@ -158,7 +158,7 @@ cmd_baseline_rebuild() {
   # (El flujo manual con pg_restore no sufría esto: el dump ya trae postgis + esquema migrado,
   #  así que los servicios no re-migran.)
   log "Deteniendo servicios y dejando solo la BD..." | tee -a "$LOGFILE"
-  rd_compose stop 2>&1 | tee -a "$LOGFILE"
+  stop_all 2>&1 | tee -a "$LOGFILE"
   rd_compose up -d db 2>&1 | tee -a "$LOGFILE"  # up (no start): en un servidor nuevo db/consul aún no existen
   db_wait_ready
   log "Recreando la base '$DB_NAME' (vacía)..." | tee -a "$LOGFILE"
